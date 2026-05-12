@@ -1064,13 +1064,19 @@
         .cs2-participant-item.blinking {
             animation: cs2Blink 0.15s ease-in-out;
         }
+        .cs2-participant-item.selecting {
+            animation: selectingPlayer 0.4s ease-in-out forwards;
+        }
+        @keyframes selectingPlayer {
+            0% { background: rgba(15,23,42,0.8); border-color: rgba(255,255,255,0.1); }
+            50% { background: rgba(245,158,11,0.3); border-color: rgba(245,158,11,0.8); transform: scale(1.05); }
+            100% { background: rgba(245,158,11,0.2); border-color: #f59e0b; color: #fbbf24; }
+        }
         .cs2-battle-arena {
             position: relative;
             width: 100%;
             height: 500px;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 576"><rect fill="%23142a45" width="1024" height="576"/><path fill="%2364748b" opacity="0.1" d="M0 200 Q256 100 512 200 T1024 200 L1024 576 L0 576 Z"/></svg>');
-            background-size: cover;
-            background-position: center;
+            background: linear-gradient(180deg, #142a45 0%, #1a1a2e 100%);
             border-radius: 12px;
             overflow: hidden;
             border: 2px solid rgba(245,158,11,0.3);
@@ -1083,7 +1089,13 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            opacity: 0.8;
+            opacity: 0.7;
+        }
+        #cs2-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
         }
         .cs2-battle-log {
             background: rgba(0,0,0,0.5);
@@ -3566,13 +3578,14 @@
                 <div style="display: flex; flex-direction: column; overflow: hidden;">
                     <h3 style="color: #fbbf24; margin: 0 0 12px; font-size: 14px; letter-spacing: 1px;">ВЫБРАТЬ 10 БОЁВИКОВ</h3>
                     <div class="cs2-participant-selector" id="cs2-selector"></div>
-                    <button class="btn-main" style="background: linear-gradient(135deg, #f59e0b, #f97316); border-color: #f59e0b; margin-top: auto;" onclick="startCS2Battle()">НАЧАТЬ БОЙ 🔥</button>
+                    <button class="btn-main" style="background: linear-gradient(135deg, #f59e0b, #f97316); border-color: #f59e0b; margin-top: auto;" onclick="autoSelectCS2Players()">НАЧАТЬ БОЙ 🔥</button>
                 </div>
                 
                 <!-- RIGHT SECTION: Battle Arena -->
                 <div style="display: flex; flex-direction: column; overflow: hidden;">
                     <div class="cs2-battle-arena" id="cs2-arena">
-                        <img src="https://static.wikia.nocookie.net/cswikia/images/0/0f/Cs2_dust2_overview.png/revision/latest?cb=20230323162128" alt="CS2 Dust2 Map" class="cs2-battle-image" style="display: none;" id="cs2-map-img">
+                        <img src="https://static.wikia.nocookie.net/cswikia/images/0/0f/Cs2_dust2_overview.png/revision/latest?cb=20230323162128" alt="CS2 Dust2 Map" class="cs2-battle-image" id="cs2-map-img">
+                        <canvas id="cs2-canvas" style="display: none;"></canvas>
                         <div id="cs2-battle-status" style="text-align: center; color: #fbbf24; font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Выбери 10 участников чтобы начать 🎮</div>
                     </div>
                     
@@ -3811,6 +3824,8 @@
         // ===== CS2 BATTLE FUNCTIONS =====
         let cs2SelectedPlayers = new Set();
         let cs2BattleInProgress = false;
+        let cs2AnimationFrame = null;
+        let cs2BallsData = [];
 
         function openCS2Battle() {
             const modal = document.getElementById('cs2-battle-modal');
@@ -3847,6 +3862,43 @@
             renderCS2ParticipantSelector();
         }
 
+        function autoSelectCS2Players() {
+            const participantsList = Array.from(participants).sort();
+            if (participantsList.length < 10) {
+                alert('Нужно минимум 10 участников! Есть: ' + participantsList.length);
+                return false;
+            }
+
+            cs2SelectedPlayers.clear();
+            const selected = participantsList.sort(() => Math.random() - 0.5).slice(0, 10);
+            
+            let index = 0;
+            const selectNext = () => {
+                if (index >= selected.length) {
+                    // All selected, start battle
+                    startCS2Battle();
+                    return;
+                }
+                
+                const selector = document.getElementById('cs2-selector');
+                if (selector) {
+                    const items = selector.querySelectorAll('.cs2-participant-item');
+                    items.forEach(item => {
+                        if (item.textContent.trim() === selected[index]) {
+                            item.classList.add('selecting');
+                            cs2SelectedPlayers.add(selected[index]);
+                        }
+                    });
+                }
+                
+                index++;
+                setTimeout(selectNext, 300);
+            };
+            
+            selectNext();
+            return true;
+        }
+
         function startCS2Battle() {
             if (cs2SelectedPlayers.size !== 10) {
                 alert('Нужно выбрать ровно 10 участников! Выбрано: ' + cs2SelectedPlayers.size);
@@ -3855,92 +3907,209 @@
 
             cs2BattleInProgress = true;
             const players = Array.from(cs2SelectedPlayers);
+            const selector = document.getElementById('cs2-selector');
+            
+            // Hide selector
+            if (selector) selector.style.display = 'none';
+            
+            // Setup canvas
             const arena = document.getElementById('cs2-arena');
+            const canvas = document.getElementById('cs2-canvas');
             const mapImg = document.getElementById('cs2-map-img');
             const statusDiv = document.getElementById('cs2-battle-status');
             const logDiv = document.getElementById('cs2-log');
-
-            // Show map image and hide status
-            mapImg.style.display = 'block';
+            
+            if (!canvas) return;
+            
+            canvas.width = arena.offsetWidth;
+            canvas.height = arena.offsetHeight;
+            canvas.style.display = 'block';
             statusDiv.style.display = 'none';
-            logDiv.innerHTML = '';
+            mapImg.style.display = 'block';
+            logDiv.innerHTML = '<div style="color: #f59e0b; text-align: center; font-weight: bold;">⚔️ БОЙ НАЧАЛСЯ! ⚔️</div>';
 
-            // Animate participant selection with blinking
-            const selector = document.getElementById('cs2-selector');
-            const items = selector.querySelectorAll('.cs2-participant-item');
-            items.forEach(item => item.classList.add('blinking'));
+            // Initialize balls for each player
+            cs2BallsData = players.map((name, idx) => {
+                const hue = (idx * 36) % 360;
+                return {
+                    name: name,
+                    x: Math.random() * (canvas.width - 40) + 20,
+                    y: Math.random() * (canvas.height - 40) + 20,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    radius: 15,
+                    color: `hsl(${hue}, 100%, 50%)`,
+                    alive: true,
+                    kills: 0
+                };
+            });
 
-            setTimeout(() => {
-                items.forEach(item => item.classList.remove('blinking'));
-                simulateCS2Battle(players, logDiv);
-            }, 2000);
+            animateCS2Battle(canvas, logDiv);
         }
 
-        function simulateCS2Battle(players, logDiv) {
-            const teams = {
-                terrorists: players.slice(0, 5),
-                counterTerrorists: players.slice(5, 10)
+        function openWinnerScreen() {
+            const winnerScreen = document.getElementById('winner-screen');
+            if (!winnerScreen) return;
+            
+            // Update winner info
+            const nickEl = document.getElementById('win-nick');
+            if (nickEl) nickEl.textContent = currentWinner || '---';
+            
+            // Reset winner screen elements
+            document.getElementById('win-chat-history').innerHTML = '';
+            document.getElementById('win-drop-history').innerHTML = '';
+            document.getElementById('win-count-stat').textContent = '0';
+            document.getElementById('win-sum-stat').textContent = '0 ₽';
+            document.getElementById('win-dep-stat').textContent = '0 ₽';
+            document.getElementById('win-amount-input').value = '';
+            document.getElementById('win-deposit-input').value = '';
+            document.getElementById('win-tg-input').value = getSavedTelegram(currentWinner) || '';
+            
+            // Show winner screen
+            winnerScreen.style.display = 'flex';
+            
+            // Reset timer for winner screen
+            winTimerActive = false;
+            let winTimer = 0;
+            const updateWinTimer = () => {
+                if (!winTimerActive) {
+                    const hours = Math.floor(winTimer / 3600);
+                    const minutes = Math.floor((winTimer % 3600) / 60);
+                    const seconds = winTimer % 60;
+                    const display = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+                    const timerEl = document.getElementById('win-timer-label');
+                    if (timerEl) timerEl.textContent = display;
+                    winTimer++;
+                    setTimeout(updateWinTimer, 1000);
+                }
             };
+            updateWinTimer();
+        }
 
-            let alive = new Set(players);
-            let round = 1;
-            let kills = [];
+        function animateCS2Battle(canvas, logDiv) {
+            const ctx = canvas.getContext('2d');
+            let lastKillTime = {};
+            
+            const animate = () => {
+                // Clear canvas
+                ctx.fillStyle = 'rgba(20, 42, 69, 0.2)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            const addLog = (text) => {
-                const entry = document.createElement('div');
-                entry.className = 'cs2-kill-event last';
-                entry.innerHTML = text;
-                logDiv.appendChild(entry);
-                logDiv.scrollTop = logDiv.scrollHeight;
-                setTimeout(() => entry.classList.remove('last'), 500);
-            };
+                const alive = cs2BallsData.filter(b => b.alive);
 
-            addLog(`<span style="color: #f59e0b; font-weight: bold;">>>> РАУНД ${round} НАЧАЛСЯ <<<</span>`);
-
-            const battleLoop = setInterval(() => {
-                if (alive.size <= 1) {
-                    clearInterval(battleLoop);
-                    if (alive.size === 1) {
-                        const survivor = Array.from(alive)[0];
-                        addLog(`<span style="color: #22c55e; font-size: 14px; font-weight: bold;">🏆 ПОБЕДИТЕЛЬ: ${escapeHtml(survivor)} 🏆</span>`);
-                    } else {
-                        addLog(`<span style="color: #22c55e;">>>> БОЙ ЗАКОНЧИЛСЯ <<<</span>`);
+                // Check if battle is over
+                if (alive.length <= 1) {
+                    cancelAnimationFrame(cs2AnimationFrame);
+                    
+                    // Show winner screen
+                    if (alive.length === 1) {
+                        const winner = alive[0];
+                        currentWinner = winner.name;
+                        rerollCount = 0;
+                        
+                        // Draw final winner
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.fillStyle = 'gold';
+                        ctx.font = 'bold 48px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                        ctx.shadowBlur = 10;
+                        ctx.fillText('🏆 ' + escapeHtml(winner.name) + ' 🏆', canvas.width / 2, canvas.height / 2);
+                        
+                        // Delay and show winner screen
+                        setTimeout(() => {
+                            canvas.style.display = 'none';
+                            const modal = document.getElementById('cs2-battle-modal');
+                            if (modal) modal.style.display = 'none';
+                            openWinnerScreen();
+                        }, 2000);
                     }
-                    cs2BattleInProgress = false;
                     return;
                 }
 
-                const victims = Array.from(alive);
-                const attacker = victims[Math.floor(Math.random() * victims.length)];
-                let defender = victims[Math.floor(Math.random() * victims.length)];
-                
-                // Ensure defender is different from attacker
-                while (defender === attacker && victims.length > 1) {
-                    defender = victims[Math.floor(Math.random() * victims.length)];
-                }
-
-                if (defender !== attacker) {
-                    alive.delete(defender);
-                    kills.push({ attacker, defender, round });
-
-                    const weapons = ['AK-47', 'M4A4', 'AWP', 'Desert Eagle', 'Knife', 'Grenade', 'Headshot'];
-                    const weapon = weapons[Math.floor(Math.random() * weapons.length)];
-                    const emoji = Math.random() > 0.7 ? '💥' : '💢';
-
-                    addLog(`${emoji} <span class="cs2-player-name">${escapeHtml(attacker)}</span> <span class="cs2-vs">убил</span> <span class="cs2-player-name">${escapeHtml(defender)}</span> <span style="color: #888;">(${weapon})</span>`);
-                }
-
-                if (alive.size <= 1) {
-                    clearInterval(battleLoop);
-                    if (alive.size === 1) {
-                        const survivor = Array.from(alive)[0];
-                        addLog(`<span style="color: #22c55e; font-size: 14px; font-weight: bold;">🏆 ПОБЕДИТЕЛЬ: ${escapeHtml(survivor)} 🏆</span>`);
-                    } else {
-                        addLog(`<span style="color: #22c55e;">>>> БОЙ ЗАКОНЧИЛСЯ <<<</span>`);
+                // Update positions and draw
+                alive.forEach((ball, idx) => {
+                    // Boundary bouncing
+                    if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= canvas.width) {
+                        ball.vx = -ball.vx;
+                        ball.x = Math.max(ball.radius, Math.min(canvas.width - ball.radius, ball.x));
                     }
-                    cs2BattleInProgress = false;
+                    if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= canvas.height) {
+                        ball.vy = -ball.vy;
+                        ball.y = Math.max(ball.radius, Math.min(canvas.height - ball.radius, ball.y));
+                    }
+
+                    // Slight random direction changes
+                    if (Math.random() < 0.02) {
+                        ball.vx += (Math.random() - 0.5) * 2;
+                        ball.vy += (Math.random() - 0.5) * 2;
+                        // Limit speed
+                        const speed = Math.sqrt(ball.vx ** 2 + ball.vy ** 2);
+                        if (speed > 3) {
+                            ball.vx = (ball.vx / speed) * 3;
+                            ball.vy = (ball.vy / speed) * 3;
+                        }
+                    }
+
+                    ball.x += ball.vx;
+                    ball.y += ball.vy;
+
+                    // Draw ball
+                    ctx.beginPath();
+                    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = ball.color;
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // Draw name above ball
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 11px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+                    ctx.shadowBlur = 4;
+                    const displayName = ball.name.length > 12 ? ball.name.substring(0, 12) + '.' : ball.name;
+                    ctx.fillText(displayName, ball.x, ball.y - ball.radius - 5);
+                });
+
+                // Collision detection and combat
+                for (let i = 0; i < alive.length; i++) {
+                    for (let j = i + 1; j < alive.length; j++) {
+                        const b1 = alive[i];
+                        const b2 = alive[j];
+                        const dist = Math.sqrt((b1.x - b2.x) ** 2 + (b1.y - b2.y) ** 2);
+                        
+                        if (dist < b1.radius + b2.radius) {
+                            // Combat! Determine loser randomly
+                            const loser = Math.random() > 0.5 ? b1 : b2;
+                            const winner = loser === b1 ? b2 : b1;
+                            
+                            loser.alive = false;
+                            winner.kills++;
+                            
+                            // Log kill
+                            const weapons = ['AK-47', 'M4A4', 'AWP', 'Desert Eagle', 'Knife', 'Grenade', 'Headshot'];
+                            const weapon = weapons[Math.floor(Math.random() * weapons.length)];
+                            const killText = `💥 <span class="cs2-player-name">${escapeHtml(winner.name)}</span> <span class="cs2-vs">убил</span> <span class="cs2-player-name">${escapeHtml(loser.name)}</span> <span style="color: #888;">(${weapon})</span>`;
+                            
+                            const entry = document.createElement('div');
+                            entry.className = 'cs2-kill-event last';
+                            entry.innerHTML = killText;
+                            logDiv.appendChild(entry);
+                            logDiv.scrollTop = logDiv.scrollHeight;
+                            setTimeout(() => entry.classList.remove('last'), 500);
+                        }
+                    }
                 }
-            }, 600);
+
+                cs2AnimationFrame = requestAnimationFrame(animate);
+            };
+
+            animate();
         }
 
     </script>
