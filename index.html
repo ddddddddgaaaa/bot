@@ -1134,6 +1134,14 @@
             color: #f59e0b;
             font-weight: bold;
         }
+        @keyframes shootingFlash {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .cs2-bullet-trail {
+            position: absolute;
+            pointer-events: none;
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -3826,6 +3834,8 @@
         let cs2BattleInProgress = false;
         let cs2AnimationFrame = null;
         let cs2BallsData = [];
+        let cs2ProjectilesData = [];
+        let cs2MapImage = null;
 
         function openCS2Battle() {
             const modal = document.getElementById('cs2-battle-modal');
@@ -3988,12 +3998,24 @@
 
         function animateCS2Battle(canvas, logDiv) {
             const ctx = canvas.getContext('2d');
-            let lastKillTime = {};
+            const mapImg = document.getElementById('cs2-map-img');
+            
+            // Load map image
+            if (mapImg && mapImg.complete) {
+                cs2MapImage = mapImg;
+            }
             
             const animate = () => {
-                // Clear canvas
-                ctx.fillStyle = 'rgba(20, 42, 69, 0.2)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                // Draw map background
+                if (cs2MapImage && cs2MapImage.complete) {
+                    ctx.drawImage(cs2MapImage, 0, 0, canvas.width, canvas.height);
+                    // Overlay semi-transparent grid for better visibility
+                    ctx.fillStyle = 'rgba(20, 42, 69, 0.1)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                } else {
+                    ctx.fillStyle = 'rgba(20, 42, 69, 0.3)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
 
                 const alive = cs2BallsData.filter(b => b.alive);
 
@@ -4008,14 +4030,14 @@
                         rerollCount = 0;
                         
                         // Draw final winner
-                        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
                         ctx.fillStyle = 'gold';
                         ctx.font = 'bold 48px Arial';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
-                        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = 'rgba(0,0,0,0.9)';
+                        ctx.shadowBlur = 15;
                         ctx.fillText('🏆 ' + escapeHtml(winner.name) + ' 🏆', canvas.width / 2, canvas.height / 2);
                         
                         // Delay and show winner screen
@@ -4029,39 +4051,147 @@
                     return;
                 }
 
-                // Update positions and draw
-                alive.forEach((ball, idx) => {
+                // Update positions and AI targeting
+                alive.forEach((ball) => {
+                    // Find closest enemy for targeting
+                    let closestEnemy = null;
+                    let closestDist = Infinity;
+                    
+                    alive.forEach(other => {
+                        if (other !== ball) {
+                            const dist = Math.sqrt((ball.x - other.x) ** 2 + (ball.y - other.y) ** 2);
+                            if (dist < closestDist) {
+                                closestDist = dist;
+                                closestEnemy = other;
+                            }
+                        }
+                    });
+
+                    // Move toward target
+                    if (closestEnemy) {
+                        const dx = closestEnemy.x - ball.x;
+                        const dy = closestEnemy.y - ball.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist > 0) {
+                            const moveSpeed = 1.5;
+                            ball.vx = (dx / dist) * moveSpeed;
+                            ball.vy = (dy / dist) * moveSpeed;
+                        }
+
+                        // Shooting mechanic
+                        if (Math.random() < 0.03 && dist < 400) { // 3% chance to shoot if in range
+                            // Create projectile
+                            cs2ProjectilesData.push({
+                                x: ball.x,
+                                y: ball.y,
+                                tx: closestEnemy.x,
+                                ty: closestEnemy.y,
+                                shooter: ball,
+                                target: closestEnemy,
+                                progress: 0,
+                                duration: 0.15 // seconds
+                            });
+                        }
+                    } else {
+                        ball.vx *= 0.98;
+                        ball.vy *= 0.98;
+                    }
+
                     // Boundary bouncing
                     if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= canvas.width) {
-                        ball.vx = -ball.vx;
+                        ball.vx = -ball.vx * 0.8;
                         ball.x = Math.max(ball.radius, Math.min(canvas.width - ball.radius, ball.x));
                     }
                     if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= canvas.height) {
-                        ball.vy = -ball.vy;
+                        ball.vy = -ball.vy * 0.8;
                         ball.y = Math.max(ball.radius, Math.min(canvas.height - ball.radius, ball.y));
-                    }
-
-                    // Slight random direction changes
-                    if (Math.random() < 0.02) {
-                        ball.vx += (Math.random() - 0.5) * 2;
-                        ball.vy += (Math.random() - 0.5) * 2;
-                        // Limit speed
-                        const speed = Math.sqrt(ball.vx ** 2 + ball.vy ** 2);
-                        if (speed > 3) {
-                            ball.vx = (ball.vx / speed) * 3;
-                            ball.vy = (ball.vy / speed) * 3;
-                        }
                     }
 
                     ball.x += ball.vx;
                     ball.y += ball.vy;
+                });
 
-                    // Draw ball
+                // Update and draw projectiles
+                for (let i = cs2ProjectilesData.length - 1; i >= 0; i--) {
+                    const proj = cs2ProjectilesData[i];
+                    proj.progress += 1 / 60 / proj.duration; // Assuming 60 FPS
+
+                    if (proj.progress >= 1) {
+                        // Bullet reached target - deal damage
+                        if (proj.target.alive) {
+                            proj.target.alive = false;
+                            proj.shooter.kills++;
+
+                            // Log kill
+                            const weapons = ['AK-47', 'M4A4', 'AWP', 'Desert Eagle', 'USP-S', 'P90', 'Headshot'];
+                            const weapon = weapons[Math.floor(Math.random() * weapons.length)];
+                            const killText = `🔫 <span class="cs2-player-name">${escapeHtml(proj.shooter.name)}</span> <span class="cs2-vs">убил</span> <span class="cs2-player-name">${escapeHtml(proj.target.name)}</span> <span style="color: #888;">(${weapon})</span>`;
+                            
+                            const entry = document.createElement('div');
+                            entry.className = 'cs2-kill-event last';
+                            entry.innerHTML = killText;
+                            logDiv.appendChild(entry);
+                            logDiv.scrollTop = logDiv.scrollHeight;
+                            setTimeout(() => entry.classList.remove('last'), 500);
+
+                            // Draw impact effect
+                            ctx.fillStyle = 'rgba(255, 0, 0, 0.6)';
+                            ctx.beginPath();
+                            ctx.arc(proj.tx, proj.ty, 12, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+
+                        cs2ProjectilesData.splice(i, 1);
+                    } else {
+                        // Draw bullet trail
+                        const startX = proj.x;
+                        const startY = proj.y;
+                        const endX = proj.x + (proj.tx - proj.x) * proj.progress;
+                        const endY = proj.y + (proj.ty - proj.y) * proj.progress;
+
+                        // Bullet trail (bright yellow line)
+                        ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
+                        ctx.lineWidth = 3;
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.moveTo(startX, startY);
+                        ctx.lineTo(endX, endY);
+                        ctx.stroke();
+
+                        // Bright bullet core
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.arc(endX, endY, 2, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Muzzle flash at shooter position
+                        if (proj.progress < 0.3) {
+                            ctx.fillStyle = `rgba(255, 150, 0, ${1 - proj.progress / 0.3})`;
+                            ctx.beginPath();
+                            ctx.arc(startX, startY, 8, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                }
+
+                // Draw all balls
+                alive.forEach((ball) => {
+                    // Draw ball with glow
                     ctx.beginPath();
                     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
                     ctx.fillStyle = ball.color;
                     ctx.fill();
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                    
+                    // Glow effect
+                    ctx.strokeStyle = ball.color;
+                    ctx.globalAlpha = 0.3;
+                    ctx.lineWidth = 6;
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                    
+                    // Outer ring
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
                     ctx.lineWidth = 2;
                     ctx.stroke();
 
@@ -4073,38 +4203,15 @@
                     ctx.shadowColor = 'rgba(0,0,0,0.9)';
                     ctx.shadowBlur = 4;
                     const displayName = ball.name.length > 12 ? ball.name.substring(0, 12) + '.' : ball.name;
-                    ctx.fillText(displayName, ball.x, ball.y - ball.radius - 5);
-                });
-
-                // Collision detection and combat
-                for (let i = 0; i < alive.length; i++) {
-                    for (let j = i + 1; j < alive.length; j++) {
-                        const b1 = alive[i];
-                        const b2 = alive[j];
-                        const dist = Math.sqrt((b1.x - b2.x) ** 2 + (b1.y - b2.y) ** 2);
-                        
-                        if (dist < b1.radius + b2.radius) {
-                            // Combat! Determine loser randomly
-                            const loser = Math.random() > 0.5 ? b1 : b2;
-                            const winner = loser === b1 ? b2 : b1;
-                            
-                            loser.alive = false;
-                            winner.kills++;
-                            
-                            // Log kill
-                            const weapons = ['AK-47', 'M4A4', 'AWP', 'Desert Eagle', 'Knife', 'Grenade', 'Headshot'];
-                            const weapon = weapons[Math.floor(Math.random() * weapons.length)];
-                            const killText = `💥 <span class="cs2-player-name">${escapeHtml(winner.name)}</span> <span class="cs2-vs">убил</span> <span class="cs2-player-name">${escapeHtml(loser.name)}</span> <span style="color: #888;">(${weapon})</span>`;
-                            
-                            const entry = document.createElement('div');
-                            entry.className = 'cs2-kill-event last';
-                            entry.innerHTML = killText;
-                            logDiv.appendChild(entry);
-                            logDiv.scrollTop = logDiv.scrollHeight;
-                            setTimeout(() => entry.classList.remove('last'), 500);
-                        }
+                    ctx.fillText(displayName, ball.x, ball.y - ball.radius - 8);
+                    
+                    // Draw kill counter
+                    if (ball.kills > 0) {
+                        ctx.fillStyle = '#ffff00';
+                        ctx.font = 'bold 9px Arial';
+                        ctx.fillText('(' + ball.kills + ' kills)', ball.x, ball.y + ball.radius + 12);
                     }
-                }
+                });
 
                 cs2AnimationFrame = requestAnimationFrame(animate);
             };
