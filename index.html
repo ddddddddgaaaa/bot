@@ -3929,7 +3929,7 @@
             const statusDiv = document.getElementById('cs2-battle-status');
             const logDiv = document.getElementById('cs2-log');
             
-            if (!canvas) return;
+            if (!canvas || !arena) return;
             
             canvas.width = arena.offsetWidth;
             canvas.height = arena.offsetHeight;
@@ -3938,22 +3938,42 @@
             mapImg.style.display = 'block';
             logDiv.innerHTML = '<div style="color: #f59e0b; text-align: center; font-weight: bold;">⚔️ БОЙ НАЧАЛСЯ! ⚔️</div>';
 
-            // Initialize balls for each player
-            cs2BallsData = players.map((name, idx) => {
-                const hue = (idx * 36) % 360;
-                return {
-                    name: name,
-                    x: Math.random() * (canvas.width - 40) + 20,
-                    y: Math.random() * (canvas.height - 40) + 20,
-                    vx: (Math.random() - 0.5) * 3,
-                    vy: (Math.random() - 0.5) * 3,
+            // Initialize balls for each player - 5 blue at top, 5 orange at bottom
+            cs2BallsData = [];
+            
+            // Blue team (top)
+            for (let i = 0; i < 5; i++) {
+                cs2BallsData.push({
+                    name: players[i],
+                    x: (i + 1) * (canvas.width / 6),
+                    y: 50,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: 0,
                     radius: 15,
-                    color: `hsl(${hue}, 100%, 50%)`,
+                    color: '#1e88e5',
+                    team: 'blue',
                     alive: true,
                     kills: 0
-                };
-            });
+                });
+            }
+            
+            // Orange team (bottom)
+            for (let i = 5; i < 10; i++) {
+                cs2BallsData.push({
+                    name: players[i],
+                    x: ((i - 5) + 1) * (canvas.width / 6),
+                    y: canvas.height - 50,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: 0,
+                    radius: 15,
+                    color: '#ff9800',
+                    team: 'orange',
+                    alive: true,
+                    kills: 0
+                });
+            }
 
+            cs2ProjectilesData = [];
             animateCS2Battle(canvas, logDiv);
         }
 
@@ -4010,10 +4030,10 @@
                 if (cs2MapImage && cs2MapImage.complete) {
                     ctx.drawImage(cs2MapImage, 0, 0, canvas.width, canvas.height);
                     // Overlay semi-transparent grid for better visibility
-                    ctx.fillStyle = 'rgba(20, 42, 69, 0.1)';
+                    ctx.fillStyle = 'rgba(20, 42, 69, 0.15)';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                 } else {
-                    ctx.fillStyle = 'rgba(20, 42, 69, 0.3)';
+                    ctx.fillStyle = 'rgba(20, 42, 69, 0.4)';
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                 }
 
@@ -4030,7 +4050,7 @@
                         rerollCount = 0;
                         
                         // Draw final winner
-                        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
                         ctx.fillStyle = 'gold';
                         ctx.font = 'bold 48px Arial';
@@ -4053,12 +4073,12 @@
 
                 // Update positions and AI targeting
                 alive.forEach((ball) => {
-                    // Find closest enemy for targeting
+                    // Find closest enemy from OTHER team for targeting
                     let closestEnemy = null;
                     let closestDist = Infinity;
                     
                     alive.forEach(other => {
-                        if (other !== ball) {
+                        if (other !== ball && other.team !== ball.team) {
                             const dist = Math.sqrt((ball.x - other.x) ** 2 + (ball.y - other.y) ** 2);
                             if (dist < closestDist) {
                                 closestDist = dist;
@@ -4074,13 +4094,13 @@
                         const dist = Math.sqrt(dx * dx + dy * dy);
                         
                         if (dist > 0) {
-                            const moveSpeed = 1.5;
-                            ball.vx = (dx / dist) * moveSpeed;
-                            ball.vy = (dy / dist) * moveSpeed;
+                            const moveSpeed = 1.2;
+                            ball.vx = (dx / dist) * moveSpeed + (Math.random() - 0.5) * 0.3;
+                            ball.vy = (dy / dist) * moveSpeed + (Math.random() - 0.5) * 0.3;
                         }
 
-                        // Shooting mechanic
-                        if (Math.random() < 0.03 && dist < 400) { // 3% chance to shoot if in range
+                        // Shooting mechanic - fire at enemies
+                        if (Math.random() < 0.04 && dist < 600) { // 4% chance to shoot if in range
                             // Create projectile
                             cs2ProjectilesData.push({
                                 x: ball.x,
@@ -4090,21 +4110,21 @@
                                 shooter: ball,
                                 target: closestEnemy,
                                 progress: 0,
-                                duration: 0.15 // seconds
+                                duration: 10 // 10 frames
                             });
                         }
                     } else {
-                        ball.vx *= 0.98;
-                        ball.vy *= 0.98;
+                        ball.vx *= 0.95;
+                        ball.vy *= 0.95;
                     }
 
                     // Boundary bouncing
                     if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= canvas.width) {
-                        ball.vx = -ball.vx * 0.8;
+                        ball.vx = -ball.vx * 0.7;
                         ball.x = Math.max(ball.radius, Math.min(canvas.width - ball.radius, ball.x));
                     }
                     if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= canvas.height) {
-                        ball.vy = -ball.vy * 0.8;
+                        ball.vy = -ball.vy * 0.7;
                         ball.y = Math.max(ball.radius, Math.min(canvas.height - ball.radius, ball.y));
                     }
 
@@ -4115,11 +4135,11 @@
                 // Update and draw projectiles
                 for (let i = cs2ProjectilesData.length - 1; i >= 0; i--) {
                     const proj = cs2ProjectilesData[i];
-                    proj.progress += 1 / 60 / proj.duration; // Assuming 60 FPS
+                    proj.progress++;
 
-                    if (proj.progress >= 1) {
+                    if (proj.progress >= proj.duration) {
                         // Bullet reached target - deal damage
-                        if (proj.target.alive) {
+                        if (proj.target.alive && proj.shooter.alive) {
                             proj.target.alive = false;
                             proj.shooter.kills++;
 
@@ -4134,44 +4154,34 @@
                             logDiv.appendChild(entry);
                             logDiv.scrollTop = logDiv.scrollHeight;
                             setTimeout(() => entry.classList.remove('last'), 500);
-
-                            // Draw impact effect
-                            ctx.fillStyle = 'rgba(255, 0, 0, 0.6)';
-                            ctx.beginPath();
-                            ctx.arc(proj.tx, proj.ty, 12, 0, Math.PI * 2);
-                            ctx.fill();
                         }
 
                         cs2ProjectilesData.splice(i, 1);
                     } else {
-                        // Draw bullet trail
-                        const startX = proj.x;
-                        const startY = proj.y;
-                        const endX = proj.x + (proj.tx - proj.x) * proj.progress;
-                        const endY = proj.y + (proj.ty - proj.y) * proj.progress;
+                        // Draw bullet (small ball flying)
+                        const progress = proj.progress / proj.duration;
+                        const bulletX = proj.x + (proj.tx - proj.x) * progress;
+                        const bulletY = proj.y + (proj.ty - proj.y) * progress;
 
-                        // Bullet trail (bright yellow line)
-                        ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
-                        ctx.lineWidth = 3;
-                        ctx.lineCap = 'round';
+                        // Draw bullet trail
+                        ctx.strokeStyle = 'rgba(255, 200, 0, 0.7)';
+                        ctx.lineWidth = 2;
                         ctx.beginPath();
-                        ctx.moveTo(startX, startY);
-                        ctx.lineTo(endX, endY);
+                        ctx.moveTo(proj.x, proj.y);
+                        ctx.lineTo(bulletX, bulletY);
                         ctx.stroke();
 
-                        // Bright bullet core
-                        ctx.fillStyle = '#ffffff';
+                        // Draw bullet ball
+                        ctx.fillStyle = 'rgba(255, 255, 100, 0.9)';
                         ctx.beginPath();
-                        ctx.arc(endX, endY, 2, 0, Math.PI * 2);
+                        ctx.arc(bulletX, bulletY, 4, 0, Math.PI * 2);
                         ctx.fill();
 
-                        // Muzzle flash at shooter position
-                        if (proj.progress < 0.3) {
-                            ctx.fillStyle = `rgba(255, 150, 0, ${1 - proj.progress / 0.3})`;
-                            ctx.beginPath();
-                            ctx.arc(startX, startY, 8, 0, Math.PI * 2);
-                            ctx.fill();
-                        }
+                        // Bright core
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.arc(bulletX, bulletY, 1.5, 0, Math.PI * 2);
+                        ctx.fill();
                     }
                 }
 
@@ -4184,32 +4194,41 @@
                     ctx.fill();
                     
                     // Glow effect
+                    ctx.shadowColor = ball.color;
+                    ctx.shadowBlur = 12;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
+                    
+                    // Outer glow
                     ctx.strokeStyle = ball.color;
-                    ctx.globalAlpha = 0.3;
-                    ctx.lineWidth = 6;
+                    ctx.globalAlpha = 0.4;
+                    ctx.lineWidth = 8;
                     ctx.stroke();
                     ctx.globalAlpha = 1;
                     
                     // Outer ring
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
                     ctx.lineWidth = 2;
                     ctx.stroke();
 
                     // Draw name above ball
                     ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 11px Arial';
+                    ctx.font = 'bold 10px Arial';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
                     ctx.shadowColor = 'rgba(0,0,0,0.9)';
                     ctx.shadowBlur = 4;
-                    const displayName = ball.name.length > 12 ? ball.name.substring(0, 12) + '.' : ball.name;
+                    const displayName = ball.name.length > 10 ? ball.name.substring(0, 10) : ball.name;
                     ctx.fillText(displayName, ball.x, ball.y - ball.radius - 8);
                     
                     // Draw kill counter
                     if (ball.kills > 0) {
                         ctx.fillStyle = '#ffff00';
-                        ctx.font = 'bold 9px Arial';
-                        ctx.fillText('(' + ball.kills + ' kills)', ball.x, ball.y + ball.radius + 12);
+                        ctx.font = 'bold 10px Arial';
+                        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                        ctx.shadowBlur = 3;
+                        ctx.fillText(ball.kills + ' kills', ball.x, ball.y + ball.radius + 12);
                     }
                 });
 
