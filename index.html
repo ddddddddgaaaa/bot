@@ -3943,45 +3943,45 @@
             mapImg.style.display = 'block';
             logDiv.innerHTML = '<div style="color: #f59e0b; text-align: center; font-weight: bold;">⚔️ БОЙ НАЧАЛСЯ! ⚔️</div>';
 
-            // Initialize balls for each player - 5 blue at top, 5 orange at bottom
-            cs2BallsData = [];
-            const padding = 80;
-            const usableWidth = canvas.width - padding * 2;
-            const usableHeight = canvas.height - padding * 2;
-            
-            // Blue team (top area)
-            for (let i = 0; i < 5; i++) {
-                cs2BallsData.push({
-                    name: players[i],
-                    x: padding + (i + 0.5) * (usableWidth / 5),
-                    y: padding + 40,
-                    vx: (Math.random() - 0.5) * 1.5,
-                    vy: (Math.random() - 0.5) * 1.5,
-                    radius: 15,
-                    color: '#1e88e5',
-                    team: 'blue',
-                    alive: true,
-                    kills: 0,
-                    shootCooldown: 0
-                });
-            }
-            
-            // Orange team (bottom area)
-            for (let i = 5; i < 10; i++) {
-                cs2BallsData.push({
-                    name: players[i],
-                    x: padding + ((i - 5) + 0.5) * (usableWidth / 5),
-                    y: canvas.height - padding - 40,
-                    vx: (Math.random() - 0.5) * 1.5,
-                    vy: (Math.random() - 0.5) * 1.5,
-                    radius: 15,
-                    color: '#ff9800',
-                    team: 'orange',
-                    alive: true,
-                    kills: 0,
-                    shootCooldown: 0
-                });
-            }
+             // Initialize balls for each player - 5 blue at top, 5 orange at bottom
+             cs2BallsData = [];
+             const padding = 80;
+             const usableWidth = canvas.width - padding * 2;
+             const usableHeight = canvas.height - padding * 2;
+             
+             // Blue team (top area)
+             for (let i = 0; i < 5; i++) {
+                 cs2BallsData.push({
+                     name: players[i],
+                     x: padding + (i + 0.5) * (usableWidth / 5),
+                     y: padding + 40,
+                     vx: (Math.random() - 0.5) * 1.5,
+                     vy: (Math.random() - 0.5) * 1.5,
+                     radius: 15,
+                     color: '#1e88e5',
+                     team: 'blue',
+                     alive: true,
+                     kills: 0,
+                     shootCooldown: 0
+                 });
+             }
+             
+             // Orange team (bottom area)
+             for (let i = 5; i < 10; i++) {
+                 cs2BallsData.push({
+                     name: players[i],
+                     x: padding + ((i - 5) + 0.5) * (usableWidth / 5),
+                     y: canvas.height - padding - 40,
+                     vx: (Math.random() - 0.5) * 1.5,
+                     vy: (Math.random() - 0.5) * 1.5,
+                     radius: 15,
+                     color: '#ff9800',
+                     team: 'orange',
+                     alive: true,
+                     kills: 0,
+                     shootCooldown: 0
+                 });
+             }
 
             cs2ProjectilesData = [];
             animateCS2Battle(canvas, logDiv);
@@ -4052,55 +4052,172 @@
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                 }
 
-                const alive = cs2BallsData.filter(b => b.alive);
+                 const alive = cs2BallsData.filter(b => b.alive);
 
-                // Check if battle is over
-                if (alive.length <= 1) {
-                    cancelAnimationFrame(cs2AnimationFrame);
-                    
-                    // Show winner screen
-                    if (alive.length === 1) {
-                        const winner = alive[0];
-                        currentWinner = winner.name;
-                        rerollCount = 0;
-                        
-                        // Draw final winner
-                        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        ctx.fillStyle = 'gold';
-                        ctx.font = 'bold 48px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        ctx.shadowColor = 'rgba(0,0,0,0.9)';
-                        ctx.shadowBlur = 15;
-                        ctx.fillText('🏆 ' + escapeHtml(winner.name) + ' 🏆', canvas.width / 2, canvas.height / 2);
-                        
-                        // Delay and show winner screen
-                        setTimeout(() => {
-                            canvas.style.display = 'none';
-                            const modal = document.getElementById('cs2-battle-modal');
-                            if (modal) modal.style.display = 'none';
-                            openWinnerScreen();
-                        }, 2000);
-                    }
-                    return;
-                }
+                  // Check if all remaining players are from the same team (more than 1)
+                  if (alive.length > 1) {
+                      const firstTeam = alive[0].team;
+                      const allSameTeam = alive.every(player => player.team === firstTeam);
+                      
+                      if (allSameTeam) {
+                          // All remaining players are from the same team - initiate smooth selection
+                          cancelAnimationFrame(cs2AnimationFrame);
+                          
+                          // Fade out effect and select winner smoothly
+                          const startTime = Date.now();
+                          const duration = 3000; // 3 seconds for selection animation
+                          
+                          const animateSelection = () => {
+                              const elapsed = Date.now() - startTime;
+                              const progress = Math.min(elapsed / duration, 1);
+                              
+                              // Draw map background
+                              if (cs2MapImage && cs2MapImage.complete) {
+                                  ctx.drawImage(cs2MapImage, 0, 0, canvas.width, canvas.height);
+                                  ctx.fillStyle = 'rgba(20, 42, 69, 0.1)';
+                                  ctx.fillRect(0, 0, canvas.width, canvas.height);
+                              } else {
+                                  ctx.fillStyle = 'rgba(20, 42, 69, 0.3)';
+                                  ctx.fillRect(0, 0, canvas.width, canvas.height);
+                              }
+                              
+                              // Draw all players with pulsing effect
+                              alive.forEach((ball, index) => {
+                                  // Pulsing scale based on progress
+                                  const pulse = Math.sin(progress * Math.PI * 5) * 0.1 + 1;
+                                  const radius = ball.radius * pulse;
+                                  
+                                  // Draw ball
+                                  ctx.beginPath();
+                                  ctx.arc(ball.x, ball.y, radius, 0, Math.PI * 2);
+                                  ctx.fillStyle = ball.color;
+                                  ctx.fill();
+                                  
+                                  // Glow effect
+                                  ctx.shadowColor = ball.color;
+                                  ctx.shadowBlur = 15;
+                                  ctx.shadowOffsetX = 0;
+                                  ctx.shadowOffsetY = 0;
+                                  
+                                  ctx.strokeStyle = ball.color;
+                                  ctx.globalAlpha = 0.35;
+                                  ctx.lineWidth = 10;
+                                  ctx.stroke();
+                                  ctx.globalAlpha = 1;
+                                  
+                                  // Outer ring
+                                  ctx.shadowBlur = 0;
+                                  ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                                  ctx.lineWidth = 2.5;
+                                  ctx.stroke();
+                                  
+                                  // Draw name
+                                  ctx.fillStyle = '#ffffff';
+                                  ctx.font = 'bold 10px Arial';
+                                  ctx.textAlign = 'center';
+                                  ctx.textBaseline = 'bottom';
+                                  ctx.shadowColor = 'rgba(0,0,0,0.95)';
+                                  ctx.shadowBlur = 5;
+                                  const displayName = ball.name.length > 10 ? ball.name.substring(0, 10) : ball.name;
+                                  ctx.fillText(displayName, ball.x, ball.y - radius - 8);
+                              });
+                              
+                              // If animation complete, select winner
+                              if (progress >= 1) {
+                                  // Select winner based on highest kills, then random
+                                  const winner = alive.reduce((best, current) => {
+                                      if (current.kills > best.kills) return current;
+                                      if (current.kills === best.kills && Math.random() < 0.5) return current;
+                                      return best;
+                                  });
+                                  
+                                  currentWinner = winner.name;
+                                  rerollCount = 0;
+                                  
+                                  // Show winner screen after brief pause
+                                  setTimeout(() => {
+                                      canvas.style.display = 'none';
+                                      const modal = document.getElementById('cs2-battle-modal');
+                                      if (modal) modal.style.display = 'none';
+                                      openWinnerScreen();
+                                  }, 500);
+                                  return;
+                              }
+                              
+                              // Continue animation
+                              requestAnimationFrame(animateSelection);
+                          };
+                          
+                          animateSelection();
+                          return;
+                      }
+                  }
+
+                  // Check if battle is over - only one player should remain total
+                  if (alive.length <= 1) {
+                     cancelAnimationFrame(cs2AnimationFrame);
+                     
+                     // Show winner screen
+                     if (alive.length === 1) {
+                         const winner = alive[0];
+                         currentWinner = winner.name;
+                         rerollCount = 0;
+                         
+                         // Draw final winner
+                         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                         ctx.fillRect(0, 0, canvas.width, canvas.height);
+                         ctx.fillStyle = 'gold';
+                         ctx.font = 'bold 48px Arial';
+                         ctx.textAlign = 'center';
+                         ctx.textBaseline = 'middle';
+                         ctx.shadowColor = 'rgba(0,0,0,0.9)';
+                         ctx.shadowBlur = 15;
+                         ctx.fillText('🏆 ' + escapeHtml(winner.name) + ' 🏆', canvas.width / 2, canvas.height / 2);
+                         
+                         // Delay and show winner screen
+                         setTimeout(() => {
+                             canvas.style.display = 'none';
+                             const modal = document.getElementById('cs2-battle-modal');
+                             if (modal) modal.style.display = 'none';
+                             openWinnerScreen();
+                         }, 2000);
+                     } else {
+                         // No survivors - draw
+                         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                         ctx.fillRect(0, 0, canvas.width, canvas.height);
+                         ctx.fillStyle = 'white';
+                         ctx.font = 'bold 36px Arial';
+                         ctx.textAlign = 'center';
+                         ctx.textBaseline = 'middle';
+                         ctx.shadowColor = 'rgba(0,0,0,0.9)';
+                         ctx.shadowBlur = 15;
+                         ctx.fillText('Ничья! Всеeliminated.', canvas.width / 2, canvas.height / 2);
+                         
+                         setTimeout(() => {
+                             canvas.style.display = 'none';
+                             const modal = document.getElementById('cs2-battle-modal');
+                             if (modal) modal.style.display = 'none';
+                             // Optionally show a draw message or just close
+                         }, 2000);
+                     }
+                     return;
+                 }
 
                 // Update positions and AI targeting
                 alive.forEach((ball, idx) => {
-                    // Find closest enemy from OTHER team for targeting
-                    let closestEnemy = null;
-                    let closestDist = Infinity;
-                    
-                    alive.forEach(other => {
-                        if (other !== ball && other.team !== ball.team) {
-                            const dist = Math.sqrt((ball.x - other.x) ** 2 + (ball.y - other.y) ** 2);
-                            if (dist < closestDist) {
-                                closestDist = dist;
-                                closestEnemy = other;
-                            }
-                        }
-                    });
+                 // Find closest enemy from OTHER team for targeting
+                     let closestEnemy = null;
+                     let closestDist = Infinity;
+                     
+                     alive.forEach(other => {
+                         if (other !== ball && other.team !== ball.team) {
+                             const dist = Math.sqrt((ball.x - other.x) ** 2 + (ball.y - other.y) ** 2);
+                             if (dist < closestDist) {
+                                 closestDist = dist;
+                                 closestEnemy = other;
+                             }
+                         }
+                     });
 
                     // Decrease cooldown
                     if (ball.shootCooldown > 0) {
@@ -4113,15 +4230,15 @@
                         const dy = closestEnemy.y - ball.y;
                         const dist = Math.sqrt(dx * dx + dy * dy);
                         
-                        if (dist > 0) {
-                            // Slower movement speed
-                            const moveSpeed = 0.8;
-                            ball.vx = (dx / dist) * moveSpeed + (Math.random() - 0.5) * 0.4;
-                            ball.vy = (dy / dist) * moveSpeed + (Math.random() - 0.5) * 0.4;
-                        }
+                         if (dist > 0) {
+                             // Slower movement speed
+                             const moveSpeed = 0.2;
+                             ball.vx = (dx / dist) * moveSpeed + (Math.random() - 0.5) * 0.4;
+                             ball.vy = (dy / dist) * moveSpeed + (Math.random() - 0.5) * 0.4;
+                         }
 
                         // Slower shooting mechanic - much less frequent
-                        if (ball.shootCooldown <= 0 && Math.random() < 0.012 && dist < 500) { // 1.2% chance, lower range
+                        if (ball.shootCooldown <= 0 && Math.random() < 0.004 && dist < 500) { // 0.4% chance, lower range
                             cs2ProjectilesData.push({
                                 x: ball.x,
                                 y: ball.y,
