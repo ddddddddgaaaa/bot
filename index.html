@@ -2811,6 +2811,7 @@
             document.getElementById('winner-screen').style.display = 'none'; 
             winTimerActive = false; 
             clearInterval(window.winInt);
+            resetCS2BattleState();
             // Останавливаем автокрут при закрытии окна рулетки
             autoSpinEnabled = false;
             const autos = document.getElementById('autoskip-checkbox');
@@ -3590,7 +3591,8 @@
                 <div style="display: flex; flex-direction: column; overflow: hidden;">
                     <h3 style="color: #fbbf24; margin: 0 0 12px; font-size: 14px; letter-spacing: 1px;">ВЫБРАТЬ 10 БОЁВИКОВ</h3>
                     <div class="cs2-participant-selector" id="cs2-selector"></div>
-                    <button class="btn-main" style="background: linear-gradient(135deg, #f59e0b, #f97316); border-color: #f59e0b; margin-top: auto;" onclick="autoSelectCS2Players()">НАЧАТЬ БОЙ 🔥</button>
+                    <div id="cs2-selection-counter" style="margin: 10px 0 12px; text-align: center; color: #fbbf24; font-size: 13px; font-weight: 700; letter-spacing: 1px;">Выбрано: 0 / 10</div>
+                    <button class="btn-main" style="background: linear-gradient(135deg, #f59e0b, #f97316); border-color: #f59e0b; margin-top: auto;" onclick="startCS2Battle()">НАЧАТЬ БОЙ 🔥</button>
                 </div>
                 
                 <!-- RIGHT SECTION: Battle Arena -->
@@ -3842,9 +3844,48 @@
         let cs2ProjectilesData = [];
         let cs2MapImage = null;
 
+        function updateCS2SelectionUI() {
+            const counter = document.getElementById('cs2-selection-counter');
+            const status = document.getElementById('cs2-battle-status');
+            if (counter) {
+                counter.textContent = `Выбрано: ${cs2SelectedPlayers.size} / 10`;
+            }
+            if (status && !cs2BattleInProgress) {
+                status.textContent = cs2SelectedPlayers.size === 10
+                    ? 'Ровно 10 участников выбрано. Можно начинать бой'
+                    : `Выбери ровно 10 участников: ${cs2SelectedPlayers.size}/10`;
+            }
+        }
+
+        function resetCS2BattleState() {
+            cs2BattleInProgress = false;
+            cs2SelectedPlayers.clear();
+            cs2BallsData = [];
+            cs2ProjectilesData = [];
+            if (cs2AnimationFrame) {
+                cancelAnimationFrame(cs2AnimationFrame);
+                cs2AnimationFrame = null;
+            }
+
+            const selector = document.getElementById('cs2-selector');
+            const canvas = document.getElementById('cs2-canvas');
+            const mapImg = document.getElementById('cs2-map-img');
+            const status = document.getElementById('cs2-battle-status');
+            const log = document.getElementById('cs2-log');
+
+            if (selector) selector.style.display = '';
+            if (canvas) canvas.style.display = 'none';
+            if (mapImg) mapImg.style.display = 'block';
+            if (status) status.style.display = 'block';
+            if (log) log.innerHTML = '';
+
+            updateCS2SelectionUI();
+        }
+
         function openCS2Battle() {
             const modal = document.getElementById('cs2-battle-modal');
             if (modal) {
+                resetCS2BattleState();
                 modal.style.display = 'flex';
                 renderCS2ParticipantSelector();
             }
@@ -3866,6 +3907,7 @@
                     ${escapeHtml(name)}
                 </div>`;
             }).join('');
+            updateCS2SelectionUI();
         }
 
         function toggleCS2Player(name) {
@@ -3873,6 +3915,8 @@
                 cs2SelectedPlayers.delete(name);
             } else if (cs2SelectedPlayers.size < 10) {
                 cs2SelectedPlayers.add(name);
+            } else {
+                alert('В режиме КС нужно выбрать ровно 10 участников.');
             }
             renderCS2ParticipantSelector();
         }
