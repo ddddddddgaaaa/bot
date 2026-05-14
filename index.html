@@ -3602,31 +3602,54 @@
             <div class="close-x" onclick="closeModals()">&times;</div>
             <h2 style="color: #f59e0b; margin: 0 0 20px; text-shadow: 0 0 10px rgba(245,158,11,0.5); letter-spacing: 2px;">CS2 BATTLE ARENA ⚔️</h2>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex-grow: 1; overflow: hidden;">
-                <!-- LEFT SECTION: Participant Selection -->
-                <div style="display: flex; flex-direction: column; overflow: hidden;">
-                    <h3 style="color: #fbbf24; margin: 0 0 12px; font-size: 14px; letter-spacing: 1px;">ВЫБРАТЬ 10 БОЁВИКОВ</h3>
-                    <div class="cs2-participant-selector" id="cs2-selector"></div>
-<div style="display:flex; gap:10px; margin-bottom:10px;">
-                         <button class="btn-main" style="flex:1; background: linear-gradient(135deg, #f59e0b, #f97316); border-color: #f59e0b; margin-bottom:0; padding:10px; font-size:12px;" onclick="autoSelectCS2Players()">🎲 АВТОВЫБОР 10</button>
-                         <button class="btn-main" style="flex:1; background: linear-gradient(135deg, #f59e0b, #f97316); border-color: #f59e0b; margin-bottom:0; padding:10px; font-size:12px;" onclick="startCS2Battle()">НАЧАТЬ БОЙ 🔥</button>
+             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex-grow: 1; overflow: hidden;">
+                 <!-- LEFT SECTION: Maps and Participant Selection -->
+                 <div style="display: flex; flex-direction: column; overflow: hidden;">
+                     <h3 style="color: #fbbf24; margin: 0 0 12px; font-size: 14px; letter-spacing: 1px;">КАРТЫ И УЧАСТНИКИ</h3>
+                     <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                         <div style="flex: 1; text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                             <div style="font-size: 12px; color: #fbbf24; margin-bottom: 4px;">1. ДАСТ2</div>
+                             <img src="https://static.wikia.nocookie.net/cswikia/images/0/0f/Cs2_dust2_overview.png/revision/latest?cb=20230323162128" alt="CS2 Dust2 Map" style="width: 100%; max-height: 150px; border-radius: 4px;">
+                         </div>
+                         <div style="flex: 1; text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                             <div style="font-size: 12px; color: #fbbf24; margin-bottom: 4px;">2. МИРАЖ</div>
+                             <img src="https://static.wikia.nocookie.net/cswikia/images/0/04/Cs2_mirage_overview.png/revision/latest?cb=20230323162128" alt="CS2 Mirage Map" style="width: 100%; max-height: 150px; border-radius: 4px;">
+                         </div>
                      </div>
-                     <div id="cs2-selection-counter" style="margin: 10px 0 12px; text-align: center; color: #fbbf24; font-size: 13px; font-weight: 700; letter-spacing: 1px;">Выбрано: 0 / 10</div>
-                     <div id="cs2-auto-select-status" style="margin: 5px 0; text-align: center; color: #f59e0b; font-size: 12px; font-weight: 600; min-height: 20px;"></div>
-                 </div>
-                
-                <!-- RIGHT SECTION: Battle Arena -->
-                <div style="display: flex; flex-direction: column; overflow: hidden;">
-                    <div class="cs2-battle-arena" id="cs2-arena">
-                        <img src="https://static.wikia.nocookie.net/cswikia/images/0/0f/Cs2_dust2_overview.png/revision/latest?cb=20230323162128" alt="CS2 Dust2 Map" class="cs2-battle-image" id="cs2-map-img">
-                        <canvas id="cs2-canvas" style="display: none;"></canvas>
-                        <div id="cs2-battle-status" style="text-align: center; color: #fbbf24; font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Выбери 10 участников чтобы начать 🎮</div>
-                    </div>
-                    
-                    <h3 style="color: #fbbf24; margin: 15px 0 8px; font-size: 13px; letter-spacing: 1px;">ЖУРНАЛ БОЕВЫХ ДЕЙСТВИЙ</h3>
-                    <div class="cs2-battle-log" id="cs2-log"></div>
-                </div>
-            </div>
+                     <h3 style="color: #fbbf24; margin: 0 0 12px; font-size: 14px; letter-spacing: 1px;">ВЫБРАТЬ 10 БОЁВИКОВ</h3>
+                     <div class="cs2-participant-selector" id="cs2-selector"></div>
+                     <div style="display:flex; gap:10px; margin-bottom:10px;">
+                          <button class="btn-main" style="flex:1; background: linear-gradient(135deg, #f59e0b, #f97316); border-color: #f59e0b; margin-bottom:0; padding:10px; font-size:12px;" onclick="autoSelectCS2Players()">🎲 АВТОВЫБОР 10</button>
+                          <button class="btn-main" style="flex:1; background: linear-gradient(135deg, #f59e0b, #f97316); border-color: #f59e0b; margin-bottom:0; padding:10px; font-size:12px;" onclick="startCS2Battle()">НАЧАТЬ БОЙ 🔥</button>
+                      </div>
+                      <div id="cs2-selection-counter" style="margin: 10px 0 12px; text-align: center; color: #fbbf24; font-size: 13px; font-weight: 700; letter-spacing: 1px;">Выбрано: 0 / 10</div>
+                      <div id="cs2-auto-select-status" style="margin: 5px 0; text-align: center; color: #f59e0b; font-size: 12px; font-weight: 600; min-height: 20px;"></div>
+                  </div>
+                  
+                  <!-- RIGHT SECTION: Battle Arena and Maps -->
+                  <div style="display: flex; flex-direction: column; overflow: hidden;">
+                      <div class="cs2-battle-arena" id="cs2-arena">
+                          <img src="https://static.wikia.nocookie.net/cswikia/images/0/0f/Cs2_dust2_overview.png/revision/latest?cb=20230323162128" alt="CS2 Dust2 Map" class="cs2-battle-image" id="cs2-map-img">
+                          <canvas id="cs2-canvas" style="display: none;"></canvas>
+                          <div id="cs2-battle-status" style="text-align: center; color: #fbbf24; font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Выбери 10 участников чтобы начать 🎮</div>
+                      </div>
+                      
+                      <h3 style="color: #fbbf24; margin: 15px 0 8px; font-size: 13px; letter-spacing: 1px;">ДОПОЛНИТЕЛЬНЫЕ КАРТЫ</h3>
+                      <div style="display: flex; gap: 10px;">
+                          <div style="flex: 1; text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                              <div style="font-size: 12px; color: #fbbf24; margin-bottom: 4px;">3. ИНФЕРНО</div>
+                              <img src="https://static.wikia.nocookie.net/cswikia/images/2/24/Cs2_inferno_overview.png/revision/latest?cb=20230323162128" alt="CS2 Inferno Map" style="width: 100%; max-height: 120px; border-radius: 4px;">
+                          </div>
+                          <div style="flex: 1; text-align: center; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                              <div style="font-size: 12px; color: #fbbf24; margin-bottom: 4px;">4. НУКЕ</div>
+                              <img src="https://static.wikia.nocookie.net/cswikia/images/3/31/Cs2_nuke_overview.png/revision/latest?cb=20230323162128" alt="CS2 Nuke Map" style="width: 100%; max-height: 120px; border-radius: 4px;">
+                          </div>
+                      </div>
+                      
+                      <h3 style="color: #fbbf24; margin: 15px 0 8px; font-size: 13px; letter-spacing: 1px;">ЖУРНАЛ БОЕВЫХ ДЕЙСТВИЙ</h3>
+                      <div class="cs2-battle-log" id="cs2-log"></div>
+                  </div>
+              </div>
         </div>
     </div>
 
@@ -3910,20 +3933,13 @@ function openCS2Battle() {
         resetCS2BattleState();
         modal.style.display = 'flex';
         renderCS2ParticipantSelector();
-        // Show game mode selection
-        const statusDiv = document.getElementById('cs2-battle-status');
-        if (statusDiv) {
-            statusDiv.innerHTML = `
-                <div style="text-align: center; margin: 10px 0;">
-                    <button class="btn-main" onclick="startCS2Battle('bomb')" style="margin: 5px; padding: 8px;">💣 Bomb Defusal</button>
-                    <button class="btn-main" onclick="startCS2Battle('tdm')" style="margin: 5px; padding: 8px;">⚔️ Team Deathmatch</button>
-                    <button class="btn-main" onclick="startCS2Battle('hostage')" style="margin: 5px; padding: 8px;">👥 Hostage Rescue</button>
-                </div>
-                <div id="cs2-mode-description" style="text-align: center; color: #f59e0b; font-size: 12px; margin-top: 10px;">
-                    Select a game mode to begin
-                </div>
-            `;
-        }
+        // Automatically select a game mode and start battle after a short delay
+        setTimeout(() => {
+            // Randomly select game mode
+            const modes = ['bomb', 'tdm', 'hostage'];
+            const selectedMode = modes[Math.floor(Math.random() * modes.length)];
+            startCS2Battle(selectedMode);
+        }, 1500);
     }
 }
 
@@ -4084,7 +4100,7 @@ function startCS2Battle(mode = 'bomb') {
     for (let i = 0; i < 5; i++) {
         cs2BallsData.push({
             name: players[i],
-            number: i + 1,
+            number: i + 1, // 1-5 for blue team
             x: padding + (i + 0.5) * (usableWidth / 5),
             y: padding + 40,
             vx: (Math.random() - 0.5) * 1.5,
@@ -4103,7 +4119,7 @@ function startCS2Battle(mode = 'bomb') {
     for (let i = 5; i < 10; i++) {
         cs2BallsData.push({
             name: players[i],
-            number: i - 4, // 1-5 for orange team
+            number: i + 1, // 6-10 for orange team
             x: padding + ((i - 5) + 0.5) * (usableWidth / 5),
             y: canvas.height - padding - 40,
             vx: (Math.random() - 0.5) * 1.5,
@@ -4189,10 +4205,22 @@ function startCS2Battle(mode = 'bomb') {
             const minY = padding;
             const maxY = canvas.height - padding;
             
-            // Load map image
-            if (mapImg && mapImg.complete) {
-                cs2MapImage = mapImg;
-            }
+// Load map image
+             if (mapImg && mapImg.complete) {
+                 cs2MapImage = mapImg;
+             }
+             
+             // Define simple barriers (walls) for collision detection
+             // Format: {x, y, width, height}
+             cs2Barriers = [
+                 // Some basic barriers to create interesting movement
+                 {x: canvas.width * 0.3, y: canvas.height * 0.2, width: 20, height: 60},
+                 {x: canvas.width * 0.7, y: canvas.height * 0.4, width: 60, height: 20},
+                 {x: canvas.width * 0.4, y: canvas.height * 0.6, width: 30, height: 30},
+                 {x: canvas.width * 0.6, y: canvas.height * 0.3, width: 40, height: 25},
+                 {x: canvas.width * 0.2, y: canvas.height * 0.7, width: 25, height: 40},
+                 {x: canvas.width * 0.8, y: canvas.height * 0.6, width: 30, height: 30}
+             ];
             
             const animate = () => {
                 // Draw map background - fit entire image
@@ -4378,21 +4406,23 @@ function startCS2Battle(mode = 'bomb') {
                         ball.shootCooldown--;
                     }
 
-                    // Move toward target with more varied movement
-                    if (closestEnemy) {
-                        const dx = closestEnemy.x - ball.x;
-                        const dy = closestEnemy.y - ball.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        
+                     // Move toward target with more varied movement
+                     if (closestEnemy) {
+                         const dx = closestEnemy.x - ball.x;
+                         const dy = closestEnemy.y - ball.y;
+                         const dist = Math.sqrt(dx * dx + dy * dy);
+                         
                          if (dist > 0) {
-                             // Slower movement speed
-                             const moveSpeed = 0.2;
-                             ball.vx = (dx / dist) * moveSpeed + (Math.random() - 0.5) * 0.4;
-                             ball.vy = (dy / dist) * moveSpeed + (Math.random() - 0.5) * 0.4;
+                             // Increased movement speed for more dynamic movement
+                             const moveSpeed = 0.4; // Increased from 0.2
+                             // Add more randomness to movement for unpredictable paths
+                             ball.vx = (dx / dist) * moveSpeed + (Math.random() - 0.5) * 0.6; // Increased randomness
+                             ball.vy = (dy / dist) * moveSpeed + (Math.random() - 0.5) * 0.6; // Increased randomness
                          }
+                     }
 
-                        // Slower shooting mechanic - much less frequent
-                        if (ball.shootCooldown <= 0 && Math.random() < 0.004 && dist < 500) { // 0.4% chance, lower range
+                         // Slower shooting mechanic - much less frequent
+                         if (ball.shootCooldown <= 0 && Math.random() < 0.004 && dist < 200) { // 0.4% chance, reduced range from 500 to 200
                             cs2ProjectilesData.push({
                                 x: ball.x,
                                 y: ball.y,
@@ -4415,22 +4445,62 @@ function startCS2Battle(mode = 'bomb') {
                         ball.vy *= 0.92;
                     }
 
-                    // Boundary containment with soft bounce
-                    if (ball.x - ball.radius < minX) {
-                        ball.vx = Math.abs(ball.vx) * 0.8;
-                        ball.x = minX + ball.radius;
-                    } else if (ball.x + ball.radius > maxX) {
-                        ball.vx = -Math.abs(ball.vx) * 0.8;
-                        ball.x = maxX - ball.radius;
-                    }
-                    
-                    if (ball.y - ball.radius < minY) {
-                        ball.vy = Math.abs(ball.vy) * 0.8;
-                        ball.y = minY + ball.radius;
-                    } else if (ball.y + ball.radius > maxY) {
-                        ball.vy = -Math.abs(ball.vy) * 0.8;
-                        ball.y = maxY - ball.radius;
-                    }
+                     // Boundary containment with soft bounce
+                     if (ball.x - ball.radius < minX) {
+                         ball.vx = Math.abs(ball.vx) * 0.8;
+                         ball.x = minX + ball.radius;
+                     } else if (ball.x + ball.radius > maxX) {
+                         ball.vx = -Math.abs(ball.vx) * 0.8;
+                         ball.x = maxX - ball.radius;
+                     }
+                     
+                     if (ball.y - ball.radius < minY) {
+                         ball.vy = Math.abs(ball.vy) * 0.8;
+                         ball.y = minY + ball.radius;
+                     } else if (ball.y + ball.radius > maxY) {
+                         ball.vy = -Math.abs(ball.vy) * 0.8;
+                         ball.y = maxY - ball.radius;
+                     }
+                     
+                     // Barrier collision detection
+                     if (cs2Barriers) {
+                         cs2Barriers.forEach(barrier => {
+                             // Simple AABB collision detection
+                             if (ball.x + ball.radius > barrier.x &&
+                                 ball.x - ball.radius < barrier.x + barrier.width &&
+                                 ball.y + ball.radius > barrier.y &&
+                                 ball.y - ball.radius < barrier.y + barrier.height) {
+                                 
+                                 // Calculate collision normal
+                                 const dx = Math.abs(ball.x - (barrier.x + barrier.width/2));
+                                 const dy = Math.abs(ball.y - (barrier.y + barrier.height/2));
+                                 
+                                 if (dx > dy) {
+                                     // Horizontal collision
+                                     if (ball.x < barrier.x + barrier.width/2) {
+                                         // Left side
+                                         ball.vx = -Math.abs(ball.vx) * 0.7;
+                                         ball.x = barrier.x - ball.radius;
+                                     } else {
+                                         // Right side
+                                         ball.vx = Math.abs(ball.vx) * 0.7;
+                                         ball.x = barrier.x + barrier.width + ball.radius;
+                                     }
+                                 } else {
+                                     // Vertical collision
+                                     if (ball.y < barrier.y + barrier.height/2) {
+                                         // Top side
+                                         ball.vy = -Math.abs(ball.vy) * 0.7;
+                                         ball.y = barrier.y - ball.radius;
+                                     } else {
+                                         // Bottom side
+                                         ball.vy = Math.abs(ball.vy) * 0.7;
+                                         ball.y = barrier.y + barrier.height + ball.radius;
+                                     }
+                                 }
+                             }
+                         });
+                     }
 
                     ball.x += ball.vx;
                     ball.y += ball.vy;
@@ -4553,6 +4623,22 @@ function startCS2Battle(mode = 'bomb') {
                              ctx.arc(ball.x, ball.y - ball.radius - 8, 2, 0, Math.PI * 2);
                              ctx.fill();
                          }
+                     }
+                     
+                     // Special glow for bomb carrier
+                     if (ball.hasBomb) {
+                         // Outer glow for bomb carrier
+                         ctx.shadowColor = '#ff0000';
+                         ctx.shadowBlur = 20;
+                         ctx.shadowOffsetX = 0;
+                         ctx.shadowOffsetY = 0;
+                         
+                         ctx.strokeStyle = '#ff0000';
+                         ctx.globalAlpha = 0.5;
+                         ctx.lineWidth = 3;
+                         ctx.stroke();
+                         ctx.globalAlpha = 1;
+                         ctx.shadowBlur = 0;
                      }
                      
                      // Draw name above ball
