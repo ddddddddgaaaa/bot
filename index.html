@@ -3857,12 +3857,14 @@
         };
 
         // ===== CS2 BATTLE FUNCTIONS =====
-        let cs2SelectedPlayers = new Set();
-        let cs2BattleInProgress = false;
-        let cs2AnimationFrame = null;
-        let cs2BallsData = [];
-        let cs2ProjectilesData = [];
-        let cs2MapImage = null;
+let cs2SelectedPlayers = new Set();
+let cs2BattleInProgress = false;
+let cs2AnimationFrame = null;
+let cs2BallsData = [];
+let cs2ProjectilesData = [];
+let cs2MapImage = null;
+let cs2Bomb = null; // CS2 bomb object
+let cs2GameMode = 'bomb'; // bomb, tdm, hostage
 
         function updateCS2SelectionUI() {
             const counter = document.getElementById('cs2-selection-counter');
@@ -3902,14 +3904,28 @@
             updateCS2SelectionUI();
         }
 
-        function openCS2Battle() {
-            const modal = document.getElementById('cs2-battle-modal');
-            if (modal) {
-                resetCS2BattleState();
-                modal.style.display = 'flex';
-                renderCS2ParticipantSelector();
-            }
+function openCS2Battle() {
+    const modal = document.getElementById('cs2-battle-modal');
+    if (modal) {
+        resetCS2BattleState();
+        modal.style.display = 'flex';
+        renderCS2ParticipantSelector();
+        // Show game mode selection
+        const statusDiv = document.getElementById('cs2-battle-status');
+        if (statusDiv) {
+            statusDiv.innerHTML = `
+                <div style="text-align: center; margin: 10px 0;">
+                    <button class="btn-main" onclick="startCS2Battle('bomb')" style="margin: 5px; padding: 8px;">💣 Bomb Defusal</button>
+                    <button class="btn-main" onclick="startCS2Battle('tdm')" style="margin: 5px; padding: 8px;">⚔️ Team Deathmatch</button>
+                    <button class="btn-main" onclick="startCS2Battle('hostage')" style="margin: 5px; padding: 8px;">👥 Hostage Rescue</button>
+                </div>
+                <div id="cs2-mode-description" style="text-align: center; color: #f59e0b; font-size: 12px; margin-top: 10px;">
+                    Select a game mode to begin
+                </div>
+            `;
         }
+    }
+}
 
         function renderCS2ParticipantSelector() {
             const selector = document.getElementById('cs2-selector');
@@ -4026,78 +4042,104 @@ function autoSelectCS2Players() {
              return true;
          }
 
-        function startCS2Battle() {
-            if (cs2SelectedPlayers.size !== 10) {
-                alert('Нужно выбрать ровно 10 участников! Выбрано: ' + cs2SelectedPlayers.size);
-                return;
-            }
+function startCS2Battle(mode = 'bomb') {
+    // Set the game mode
+    cs2GameMode = mode;
+    
+    if (cs2SelectedPlayers.size !== 10) {
+        alert('Нужно выбрать ровно 10 участников! Выбрано: ' + cs2SelectedPlayers.size);
+        return;
+    }
 
-            cs2BattleInProgress = true;
-            const players = Array.from(cs2SelectedPlayers);
-            const selector = document.getElementById('cs2-selector');
-            
-            // Hide selector
-            if (selector) selector.style.display = 'none';
-            
-            // Setup canvas
-            const arena = document.getElementById('cs2-arena');
-            const canvas = document.getElementById('cs2-canvas');
-            const mapImg = document.getElementById('cs2-map-img');
-            const statusDiv = document.getElementById('cs2-battle-status');
-            const logDiv = document.getElementById('cs2-log');
-            
-            if (!canvas || !arena) return;
-            
-            canvas.width = arena.offsetWidth;
-            canvas.height = arena.offsetHeight;
-            canvas.style.display = 'block';
-            statusDiv.style.display = 'none';
-            mapImg.style.display = 'block';
-            logDiv.innerHTML = '<div style="color: #f59e0b; text-align: center; font-weight: bold;">⚔️ БОЙ НАЧАЛСЯ! ⚔️</div>';
+    cs2BattleInProgress = true;
+    const players = Array.from(cs2SelectedPlayers);
+    const selector = document.getElementById('cs2-selector');
+    
+    // Hide selector
+    if (selector) selector.style.display = 'none';
+    
+    // Setup canvas
+    const arena = document.getElementById('cs2-arena');
+    const canvas = document.getElementById('cs2-canvas');
+    const mapImg = document.getElementById('cs2-map-img');
+    const statusDiv = document.getElementById('cs2-battle-status');
+    const logDiv = document.getElementById('cs2-log');
+    
+    if (!canvas || !arena) return;
+    
+    canvas.width = arena.offsetWidth;
+    canvas.height = arena.offsetHeight;
+    canvas.style.display = 'block';
+    statusDiv.style.display = 'none';
+    mapImg.style.display = 'block';
+    logDiv.innerHTML = '<div style="color: #f59e0b; text-align: center; font-weight: bold;">⚔️ БОЙ НАЧАЛСЯ! ⚔️</div>';
 
-             // Initialize balls for each player - 5 blue at top, 5 orange at bottom
-             cs2BallsData = [];
-             const padding = 80;
-             const usableWidth = canvas.width - padding * 2;
-             const usableHeight = canvas.height - padding * 2;
-             
-             // Blue team (top area)
-             for (let i = 0; i < 5; i++) {
-                 cs2BallsData.push({
-                     name: players[i],
-                     x: padding + (i + 0.5) * (usableWidth / 5),
-                     y: padding + 40,
-                     vx: (Math.random() - 0.5) * 1.5,
-                     vy: (Math.random() - 0.5) * 1.5,
-                     radius: 15,
-                     color: '#1e88e5',
-                     team: 'blue',
-                     alive: true,
-                     kills: 0,
-                     shootCooldown: 0
-                 });
-             }
-             
-             // Orange team (bottom area)
-             for (let i = 5; i < 10; i++) {
-                 cs2BallsData.push({
-                     name: players[i],
-                     x: padding + ((i - 5) + 0.5) * (usableWidth / 5),
-                     y: canvas.height - padding - 40,
-                     vx: (Math.random() - 0.5) * 1.5,
-                     vy: (Math.random() - 0.5) * 1.5,
-                     radius: 15,
-                     color: '#ff9800',
-                     team: 'orange',
-                     alive: true,
-                     kills: 0,
-                     shootCooldown: 0
-                 });
-             }
+    // Initialize balls for each player - 5 blue at top, 5 orange at bottom
+    cs2BallsData = [];
+    const padding = 80;
+    const usableWidth = canvas.width - padding * 2;
+    const usableHeight = canvas.height - padding * 2;
+    
+    // Blue team (top area)
+    for (let i = 0; i < 5; i++) {
+        cs2BallsData.push({
+            name: players[i],
+            number: i + 1,
+            x: padding + (i + 0.5) * (usableWidth / 5),
+            y: padding + 40,
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: (Math.random() - 0.5) * 1.5,
+            radius: 10, // Made smaller
+            color: '#1e88e5',
+            team: 'blue',
+            alive: true,
+            kills: 0,
+            shootCooldown: 0,
+            hasBomb: false // For bomb carrier
+        });
+    }
+    
+    // Orange team (bottom area)
+    for (let i = 5; i < 10; i++) {
+        cs2BallsData.push({
+            name: players[i],
+            number: i - 4, // 1-5 for orange team
+            x: padding + ((i - 5) + 0.5) * (usableWidth / 5),
+            y: canvas.height - padding - 40,
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: (Math.random() - 0.5) * 1.5,
+            radius: 10, // Made smaller
+            color: '#ff9800',
+            team: 'orange',
+            alive: true,
+            kills: 0,
+            shootCooldown: 0,
+            hasBomb: false // For bomb carrier
+        });
+    }
+    
+    // Initialize bomb (CS2 style) - only for bomb mode
+    if (cs2GameMode === 'bomb') {
+        cs2Bomb = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 8,
+            planted: false,
+            defusing: false,
+            defuseProgress: 0,
+            blinkTimer: 0
+        };
+        
+        // Randomly assign bomb to one player at start
+        const bombCarrierIndex = Math.floor(Math.random() * cs2BallsData.length);
+        cs2BallsData[bombCarrierIndex].hasBomb = true;
+    } else {
+        cs2Bomb = null;
+    }
 
-            cs2ProjectilesData = [];
-            animateCS2Battle(canvas, logDiv);
-        }
+    cs2ProjectilesData = [];
+    animateCS2Battle(canvas, logDiv);
+}
 
         function openWinnerScreen() {
             const winnerScreen = document.getElementById('winner-screen');
@@ -4394,106 +4436,144 @@ function autoSelectCS2Players() {
                     ball.y += ball.vy;
                 });
 
-                // Update and draw projectiles
-                for (let i = cs2ProjectilesData.length - 1; i >= 0; i--) {
-                    const proj = cs2ProjectilesData[i];
-                    proj.progress++;
+                 // Update and draw projectiles
+                 for (let i = cs2ProjectilesData.length - 1; i >= 0; i--) {
+                     const proj = cs2ProjectilesData[i];
+                     proj.progress++;
+ 
+                     if (proj.progress >= proj.duration) {
+                         // Bullet reached target - deal damage
+                         if (proj.target.alive && proj.shooter.alive) {
+                             proj.target.alive = false;
+                             proj.shooter.kills++;
+ 
+                             // Transfer bomb if target had it
+                             if (proj.target.hasBomb) {
+                                 proj.target.hasBomb = false;
+                                 proj.shooter.hasBomb = true;
+                             }
+ 
+                             // Log kill
+                             const weapons = ['AK-47', 'M4A4', 'AWP', 'Desert Eagle', 'USP-S', 'P90', 'M249', 'Headshot'];
+                             const weapon = weapons[Math.floor(Math.random() * weapons.length)];
+                             const killText = `🔫 <span class="cs2-player-name">${escapeHtml(proj.shooter.name)}</span> <span class="cs2-vs">убил</span> <span class="cs2-player-name">${escapeHtml(proj.target.name)}</span> <span style="color: #888;">(${weapon})</span>`;
+                             
+                             const entry = document.createElement('div');
+                             entry.className = 'cs2-kill-event last';
+                             entry.innerHTML = killText;
+                             logDiv.appendChild(entry);
+                             logDiv.scrollTop = logDiv.scrollHeight;
+                             setTimeout(() => entry.classList.remove('last'), 500);
+                         }
+ 
+                         cs2ProjectilesData.splice(i, 1);
+                     } else {
+                         // Draw bullet (small ball flying)
+                         const progress = proj.progress / proj.duration;
+                         const bulletX = proj.x + (proj.tx - proj.x) * progress;
+                         const bulletY = proj.y + (proj.ty - proj.y) * progress;
+ 
+                         // Draw bullet trail
+                         ctx.strokeStyle = 'rgba(255, 200, 0, 0.6)';
+                         ctx.lineWidth = 2;
+                         ctx.lineCap = 'round';
+                         ctx.beginPath();
+                         ctx.moveTo(proj.x, proj.y);
+                         ctx.lineTo(bulletX, bulletY);
+                         ctx.stroke();
+ 
+                         // Draw bullet ball
+                         ctx.fillStyle = 'rgba(255, 255, 100, 0.85)';
+                         ctx.beginPath();
+                         ctx.arc(bulletX, bulletY, 4, 0, Math.PI * 2);
+                         ctx.fill();
+ 
+                         // Bright core
+                         ctx.fillStyle = '#ffffff';
+                         ctx.beginPath();
+                         ctx.arc(bulletX, bulletY, 2, 0, Math.PI * 2);
+                         ctx.fill();
+                     }
+                 }
+                 
+                 // Update bomb blink timer
+                 cs2Bomb.blinkTimer++;
 
-                    if (proj.progress >= proj.duration) {
-                        // Bullet reached target - deal damage
-                        if (proj.target.alive && proj.shooter.alive) {
-                            proj.target.alive = false;
-                            proj.shooter.kills++;
-
-                            // Log kill
-                            const weapons = ['AK-47', 'M4A4', 'AWP', 'Desert Eagle', 'USP-S', 'P90', 'M249', 'Headshot'];
-                            const weapon = weapons[Math.floor(Math.random() * weapons.length)];
-                            const killText = `🔫 <span class="cs2-player-name">${escapeHtml(proj.shooter.name)}</span> <span class="cs2-vs">убил</span> <span class="cs2-player-name">${escapeHtml(proj.target.name)}</span> <span style="color: #888;">(${weapon})</span>`;
-                            
-                            const entry = document.createElement('div');
-                            entry.className = 'cs2-kill-event last';
-                            entry.innerHTML = killText;
-                            logDiv.appendChild(entry);
-                            logDiv.scrollTop = logDiv.scrollHeight;
-                            setTimeout(() => entry.classList.remove('last'), 500);
-                        }
-
-                        cs2ProjectilesData.splice(i, 1);
-                    } else {
-                        // Draw bullet (small ball flying)
-                        const progress = proj.progress / proj.duration;
-                        const bulletX = proj.x + (proj.tx - proj.x) * progress;
-                        const bulletY = proj.y + (proj.ty - proj.y) * progress;
-
-                        // Draw bullet trail
-                        ctx.strokeStyle = 'rgba(255, 200, 0, 0.6)';
-                        ctx.lineWidth = 2;
-                        ctx.lineCap = 'round';
-                        ctx.beginPath();
-                        ctx.moveTo(proj.x, proj.y);
-                        ctx.lineTo(bulletX, bulletY);
-                        ctx.stroke();
-
-                        // Draw bullet ball
-                        ctx.fillStyle = 'rgba(255, 255, 100, 0.85)';
-                        ctx.beginPath();
-                        ctx.arc(bulletX, bulletY, 4, 0, Math.PI * 2);
-                        ctx.fill();
-
-                        // Bright core
-                        ctx.fillStyle = '#ffffff';
-                        ctx.beginPath();
-                        ctx.arc(bulletX, bulletY, 2, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
-
-                // Draw all alive balls
-                alive.forEach((ball) => {
-                    // Draw ball with glow
-                    ctx.beginPath();
-                    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = ball.color;
-                    ctx.fill();
-                    
-                    // Glow effect
-                    ctx.shadowColor = ball.color;
-                    ctx.shadowBlur = 15;
-                    ctx.shadowOffsetX = 0;
-                    ctx.shadowOffsetY = 0;
-                    
-                    // Outer glow
-                    ctx.strokeStyle = ball.color;
-                    ctx.globalAlpha = 0.35;
-                    ctx.lineWidth = 10;
-                    ctx.stroke();
-                    ctx.globalAlpha = 1;
-                    
-                    // Outer ring
-                    ctx.shadowBlur = 0;
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-                    ctx.lineWidth = 2.5;
-                    ctx.stroke();
-
-                    // Draw name above ball
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 10px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'bottom';
-                    ctx.shadowColor = 'rgba(0,0,0,0.95)';
-                    ctx.shadowBlur = 5;
-                    const displayName = ball.name.length > 10 ? ball.name.substring(0, 10) : ball.name;
-                    ctx.fillText(displayName, ball.x, ball.y - ball.radius - 8);
-                    
-                    // Draw kill counter
-                    if (ball.kills > 0) {
-                        ctx.fillStyle = '#ffff00';
-                        ctx.font = 'bold 10px Arial';
-                        ctx.shadowColor = 'rgba(0,0,0,0.9)';
-                        ctx.shadowBlur = 3;
-                        ctx.fillText(ball.kills + ' ⚰️', ball.x, ball.y + ball.radius + 12);
-                    }
-                });
+                 // Draw all alive balls
+                 alive.forEach((ball) => {
+                     // Draw ball with glow
+                     ctx.beginPath();
+                     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                     ctx.fillStyle = ball.color;
+                     ctx.fill();
+                     
+                     // Glow effect
+                     ctx.shadowColor = ball.color;
+                     ctx.shadowBlur = 15;
+                     ctx.shadowOffsetX = 0;
+                     ctx.shadowOffsetY = 0;
+                     
+                     // Outer glow
+                     ctx.strokeStyle = ball.color;
+                     ctx.globalAlpha = 0.35;
+                     ctx.lineWidth = 10;
+                     ctx.stroke();
+                     ctx.globalAlpha = 1;
+                     
+                     // Outer ring
+                     ctx.shadowBlur = 0;
+                     ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                     ctx.lineWidth = 2.5;
+                     ctx.stroke();
+ 
+                     // Draw number on ball
+                     ctx.fillStyle = '#ffffff';
+                     ctx.font = 'bold 8px Arial';
+                     ctx.textAlign = 'center';
+                     ctx.textBaseline = 'middle';
+                     ctx.shadowColor = 'rgba(0,0,0,0.9)';
+                     ctx.shadowBlur = 3;
+                     ctx.fillText(ball.number, ball.x, ball.y);
+                     
+                     // Draw bomb if this player has it
+                     if (ball.hasBomb) {
+                         // Bomb icon - small circle with lines
+                         ctx.beginPath();
+                         ctx.arc(ball.x, ball.y - ball.radius - 8, 4, 0, Math.PI * 2);
+                         ctx.fillStyle = '#ff0000';
+                         ctx.fill();
+                         ctx.strokeStyle = '#ffffff';
+                         ctx.lineWidth = 1;
+                         ctx.stroke();
+                         
+                         // Bomb timer blinking
+                         if (cs2Bomb.blinkTimer % 20 < 10) {
+                             ctx.fillStyle = '#ffff00';
+                             ctx.beginPath();
+                             ctx.arc(ball.x, ball.y - ball.radius - 8, 2, 0, Math.PI * 2);
+                             ctx.fill();
+                         }
+                     }
+                     
+                     // Draw name above ball
+                     ctx.fillStyle = '#ffffff';
+                     ctx.font = 'bold 10px Arial';
+                     ctx.textAlign = 'center';
+                     ctx.textBaseline = 'bottom';
+                     ctx.shadowColor = 'rgba(0,0,0,0.95)';
+                     ctx.shadowBlur = 5;
+                     const displayName = ball.name.length > 10 ? ball.name.substring(0, 10) : ball.name;
+                     ctx.fillText(displayName, ball.x, ball.y - ball.radius - 8);
+                     
+                     // Draw kill counter
+                     if (ball.kills > 0) {
+                         ctx.fillStyle = '#ffff00';
+                         ctx.font = 'bold 10px Arial';
+                         ctx.shadowColor = 'rgba(0,0,0,0.9)';
+                         ctx.shadowBlur = 3;
+                         ctx.fillText(ball.kills + ' ⚰️', ball.x, ball.y + ball.radius + 12);
+                     }
+                 });
 
                 cs2AnimationFrame = requestAnimationFrame(animate);
             };
