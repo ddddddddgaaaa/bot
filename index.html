@@ -196,41 +196,9 @@
     </div>
   </header>
 
-  <!-- COMPACT LOGIN (shown once Client ID is already saved) -->
-  <div class="panel" id="loginPanel" style="text-align:center;padding:40px 22px;">
-    <h2 style="justify-content:center;">Вход для владельца канала</h2>
-    <p class="hint" style="max-width:420px;margin-left:auto;margin-right:auto;">Войдите через Twitch, чтобы открыть управление наградами и заявками вашего канала.</p>
-    <button class="btn-primary" id="loginBtn" style="padding:13px 30px;font-size:14px;">Войти через Twitch</button>
-    <div style="margin-top:16px;">
-      <a href="#" id="showSetupLink" style="font-size:12px;color:var(--text-dim);">⚙ Изменить настройки подключения</a>
-    </div>
-  </div>
-
-  <!-- SETUP -->
-  <div class="panel hidden" id="setupPanel">
-    <h2>Подключение к Twitch</h2>
-    <p class="hint">Чтобы награды создавались и выкупы приходили именно на ваш канал, нужно один раз зарегистрировать своё приложение в Twitch — это бесплатно и занимает пару минут.</p>
-    <ol class="steps">
-      <li>Откройте <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noopener">dev.twitch.tv/console/apps</a> и нажмите «Register Your Application».</li>
-      <li>Название — любое. Категория — «Application Integration» или «Website Integration».</li>
-      <li>В поле <b>OAuth Redirect URLs</b> вставьте адрес, по которому будет открыт этот файл — он уже подставлен ниже в поле «Redirect URI». Скопируйте его туда.</li>
-      <li>Сохраните приложение и скопируйте выданный <b>Client ID</b> в поле ниже.</li>
-      <li>Нажмите «Подключиться» — Twitch спросит разрешение на управление наградами именно вашего канала (нужны права владельца/модератора).</li>
-    </ol>
-    <div class="row">
-      <div>
-        <label>Client ID вашего приложения</label>
-        <input type="text" id="clientIdInput" placeholder="напр. gp762nuuoqcoxypju8c569th9wz7q5">
-      </div>
-      <div>
-        <label>Redirect URI (вставьте это же значение в настройки приложения на Twitch)</label>
-        <input type="text" id="redirectInput">
-      </div>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;">
-      <button class="btn-primary" id="connectBtn">Подключиться к Twitch</button>
-      <a href="#" id="cancelSetupLink" class="hidden" style="font-size:12px;color:var(--text-dim);">Отмена</a>
-    </div>
+  <!-- LOGIN -->
+  <div class="panel" id="loginPanel" style="text-align:center;padding:60px 22px;">
+    <button class="btn-primary" id="loginBtn" style="padding:15px 34px;font-size:15px;">Войти через Twitch</button>
   </div>
 
   <!-- DASHBOARD -->
@@ -291,8 +259,13 @@
   const EVENTSUB_WS = 'wss://eventsub.wss.twitch.tv/ws';
   const SCOPES = 'channel:read:redemptions channel:manage:redemptions';
 
-  let clientId = '';
-  let redirectUri = '';
+  // ⚠️ Впишите сюда Client ID вашего приложения из dev.twitch.tv/console/apps.
+  // Redirect URI в настройках приложения на Twitch должен быть равен точному
+  // адресу, по которому открыт этот файл (см. redirectUri ниже — он вычисляется сам).
+  const CLIENT_ID = 'ВСТАВЬТЕ_СЮДА_CLIENT_ID';
+
+  let clientId = CLIENT_ID;
+  let redirectUri = location.origin + location.pathname;
   let accessToken = '';
   let broadcasterId = '';
   let broadcasterLogin = '';
@@ -325,8 +298,8 @@
     opts.headers = Object.assign({}, helixHeaders(), opts.headers || {});
     const res = await fetch(HELIX + path, opts);
     if(res.status === 401){
-      setStatus('Токен истёк — подключитесь снова', false);
-      showSetup();
+      setStatus('Токен истёк — войдите снова', false);
+      showLogin();
       throw new Error('unauthorized');
     }
     if(!res.ok){
@@ -337,35 +310,23 @@
     return res.json();
   }
 
-  function showSetupFull(){
-    $('loginPanel').classList.add('hidden');
-    $('setupPanel').classList.remove('hidden');
-    $('dashboard').classList.add('hidden');
-    $('cancelSetupLink').classList.toggle('hidden', !(clientId));
-  }
-  function showLoginCompact(){
-    $('setupPanel').classList.add('hidden');
+  function showLogin(){
     $('loginPanel').classList.remove('hidden');
     $('dashboard').classList.add('hidden');
   }
-  function showSetup(){
-    // decide compact vs full based on whether a Client ID is already saved
-    if(clientId){ showLoginCompact(); } else { showSetupFull(); }
-  }
   function showDashboard(){
-    $('setupPanel').classList.add('hidden');
     $('loginPanel').classList.add('hidden');
     $('dashboard').classList.remove('hidden');
   }
 
   // ---------- init ----------
   async function init(){
-    const savedConfig = await storeGet('config');
-    redirectUri = (location.origin + location.pathname);
-    $('redirectInput').value = redirectUri;
-    if(savedConfig && savedConfig.clientId){
-      clientId = savedConfig.clientId;
-      $('clientIdInput').value = clientId;
+    if(!clientId || clientId === 'ВСТАВЬТЕ_СЮДА_CLIENT_ID'){
+      setStatus('Не настроено', false);
+      $('loginBtn').disabled = true;
+      $('loginBtn').textContent = 'Не настроено — впишите Client ID в код';
+      showLogin();
+      return;
     }
 
     // parse token from redirect hash
@@ -385,7 +346,7 @@
     const savedFeed = await storeGet('feed');
     if(Array.isArray(savedFeed)) feedItems = savedFeed;
 
-    if(clientId && accessToken){
+    if(accessToken){
       try{
         await bootDashboard();
         return;
@@ -393,40 +354,16 @@
         console.error(e);
       }
     }
-    showSetup();
+    showLogin();
   }
 
-  function goToTwitchAuthorize(){
+  $('loginBtn').addEventListener('click', () => {
     const authUrl = 'https://id.twitch.tv/oauth2/authorize'
       + '?client_id=' + encodeURIComponent(clientId)
       + '&redirect_uri=' + encodeURIComponent(redirectUri)
       + '&response_type=token'
       + '&scope=' + encodeURIComponent(SCOPES);
     location.href = authUrl;
-  }
-
-  $('connectBtn').addEventListener('click', async () => {
-    clientId = $('clientIdInput').value.trim();
-    redirectUri = $('redirectInput').value.trim();
-    if(!clientId){ alert('Укажите Client ID приложения из dev.twitch.tv/console/apps'); return; }
-    await storeSet('config', { clientId, redirectUri });
-    goToTwitchAuthorize();
-  });
-
-  $('loginBtn').addEventListener('click', () => {
-    goToTwitchAuthorize();
-  });
-
-  $('showSetupLink').addEventListener('click', (e) => {
-    e.preventDefault();
-    $('clientIdInput').value = clientId;
-    $('redirectInput').value = redirectUri;
-    showSetupFull();
-  });
-
-  $('cancelSetupLink').addEventListener('click', (e) => {
-    e.preventDefault();
-    showLoginCompact();
   });
 
   // ---------- dashboard boot ----------
@@ -461,7 +398,7 @@
       if(ws) ws.close();
       accessToken = '';
       await storeSet('token', null);
-      showSetup();
+      showLogin();
       setStatus('Не подключено', false);
     });
   }
